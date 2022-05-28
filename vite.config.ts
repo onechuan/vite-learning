@@ -13,6 +13,20 @@ import viteEslint from 'vite-plugin-eslint';
 
 import viteStylelint from '@amatlash/vite-plugin-stylelint';
 
+// svg
+import svgr from 'vite-plugin-svgr';
+
+// 图片体积压缩
+import viteImagemin from 'vite-plugin-imagemin';
+
+// 雪碧图优化
+import { createSvgIconsPlugin } from 'vite-plugin-svg-icons';
+
+// 是否为生产环境，在生产环境一般会注入 NODE_ENV 这个环境变量，见下面的环境变量文件配置
+const isProduction = process.env.NODE_ENV === 'production';
+// 填入项目的 CDN 域名地址
+const CDN_URL = 'https://sanyuan.cos.ap-beijing.myqcloud.com';
+
 // 全局 scss 文件的路径
 // 用 normalizePath 解决 window 下的路径问题
 const variablePath = normalizePath(
@@ -21,6 +35,7 @@ const variablePath = normalizePath(
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: isProduction ? CDN_URL : '/',
   // 手动指定项目根目录位置
   root: path.join(__dirname, 'src'),
   plugins: [
@@ -45,6 +60,32 @@ export default defineConfig({
     viteStylelint({
       // 对某些文件排除检查
       exclude: /windicss|node_modules/
+    }),
+    svgr(),
+    viteImagemin({
+      // 无损压缩配置，无损压缩下图片质量不会变差
+      optipng: {
+        optimizationLevel: 7
+      },
+      // 有损压缩配置，有损压缩下图片质量可能会变差
+      pngquant: {
+        quality: [0.8, 0.9]
+      },
+      // svg 优化
+      svgo: {
+        plugins: [
+          {
+            name: 'removeViewBox'
+          },
+          {
+            name: 'removeEmptyAttrs',
+            active: false
+          }
+        ]
+      }
+    }),
+    createSvgIconsPlugin({
+      iconDirs: [path.join(__dirname, 'src/assets/svg')]
     })
   ],
   // css 相关的配置
@@ -69,5 +110,17 @@ export default defineConfig({
         })
       ]
     }
+  },
+  json: {
+    stringify: true
+  },
+  resolve: {
+    alias: {
+      '@': path.join(__dirname, 'src/')
+    }
+  },
+  build: {
+    // 8 KB
+    assetsInlineLimit: 8 * 1024
   }
 });
